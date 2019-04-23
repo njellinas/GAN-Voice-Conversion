@@ -1,4 +1,4 @@
 # GAN-Voice-Conversion
-Implementation of CycleGAN architectures for Voice Conversion
+Implementation of GAN architectures for Voice Conversion
 
-Implementations based on: https://github.com/leimao/Voice_Converter_CycleGAN
+Implementations of CycleGAN-VC based on: https://github.com/leimao/Voice_Converter_CycleGAN
