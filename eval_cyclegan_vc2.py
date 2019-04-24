@@ -38,7 +38,7 @@ coded_sps_B_norm, coded_sps_B_mean, coded_sps_B_std, log_f0s_mean_B, log_f0s_std
 
 model = CycleGAN2(num_features=num_mcep, batch_size=1, mode='test')
 model.load(
-    filepath=os.path.join('experiments', dataset, model_name, 'checkpoints', '{}_225000.ckpt'.format(model_name)))
+    filepath=os.path.join('experiments', dataset, model_name, 'checkpoints', '{}_200000.ckpt'.format(model_name)))
 
 print('Generating Validation Data B from A...')
 for file in glob.glob(eval_A_dir + '/*.wav'):
