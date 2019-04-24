@@ -1,7 +1,7 @@
 import os
 import numpy as np
 
-from models.model import CycleGAN
+from models.cyclegan_vc import CycleGAN
 from speech_tools import load_pickle, sample_train_data
 
 np.random.seed(300)
@@ -11,6 +11,8 @@ src_speaker = 'VCC2SF3'
 trg_speaker = 'VCC2TM1'
 model_name = 'cyclegan_vc'
 os.makedirs(os.path.join('experiments', dataset, model_name, 'checkpoints'), exist_ok=True)
+log_dir = os.path.join('logs', '{}_{}'.format(dataset, model_name))
+os.makedirs(log_dir, exist_ok=True)
 
 data_dir = os.path.join('datasets', dataset)
 exp_dir = os.path.join('experiments', dataset)
@@ -42,7 +44,7 @@ coded_sps_A_norm, coded_sps_A_mean, coded_sps_A_std, log_f0s_mean_A, log_f0s_std
 coded_sps_B_norm, coded_sps_B_mean, coded_sps_B_std, log_f0s_mean_B, log_f0s_std_B = load_pickle(
     os.path.join(exp_B_dir, 'cache{}.p'.format(num_mcep)))
 
-model = CycleGAN(num_features=num_mcep, log_dir=os.path.join('experiments', dataset, model_name, 'runs'))
+model = CycleGAN(num_features=num_mcep, log_dir=log_dir)
 
 iteration = 1
 while iteration <= num_iterations:

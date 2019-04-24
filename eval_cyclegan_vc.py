@@ -1,7 +1,7 @@
 import os
 import glob
 
-from models.model import CycleGAN
+from models.cyclegan_vc import CycleGAN
 from speech_tools import *
 
 dataset = 'vcc2018'

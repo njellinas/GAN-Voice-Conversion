@@ -19,7 +19,7 @@ os.makedirs(exp_A_dir, exist_ok=True)
 os.makedirs(exp_B_dir, exist_ok=True)
 
 sampling_rate = 22050
-num_mcep = 35
+num_mcep = 36
 frame_period = 5.0
 n_frames = 128
 
