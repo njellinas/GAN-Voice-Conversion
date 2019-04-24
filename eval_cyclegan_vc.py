@@ -37,10 +37,11 @@ coded_sps_B_norm, coded_sps_B_mean, coded_sps_B_std, log_f0s_mean_B, log_f0s_std
     os.path.join(exp_B_dir, 'cache{}.p'.format(num_mcep)))
 
 model = CycleGAN(num_features=num_mcep, mode='test')
-model.load(filepath=os.path.join('experiments', dataset, model_name, 'checkpoints', '{}_5000.ckpt'.format(model_name)))
+model.load(
+    filepath=os.path.join('experiments', dataset, model_name, 'checkpoints', '{}_225000.ckpt'.format(model_name)))
 
+print('Generating Validation Data B from A...')
 for file in glob.glob(eval_A_dir + '/*.wav'):
-    print('Generating Validation Data B from A...')
     wav, _ = librosa.load(file, sr=sampling_rate, mono=True)
     wav = wav_padding(wav=wav, sr=sampling_rate, frame_period=frame_period, multiple=4)
     f0, timeaxis, sp, ap = world_decompose(wav=wav, fs=sampling_rate, frame_period=frame_period)
@@ -50,6 +51,8 @@ for file in glob.glob(eval_A_dir + '/*.wav'):
     coded_sp_transposed = coded_sp.T
     coded_sp_norm = (coded_sp_transposed - coded_sps_A_mean) / coded_sps_A_std
     coded_sp_converted_norm = model.test(inputs=np.array([coded_sp_norm]), direction='A2B')[0]
+    if coded_sp_converted_norm.shape[1] > len(f0):
+        coded_sp_converted_norm = coded_sp_converted_norm[:, :-1]
     coded_sp_converted = coded_sp_converted_norm * coded_sps_B_std + coded_sps_B_mean
     coded_sp_converted = coded_sp_converted.T
     coded_sp_converted = np.ascontiguousarray(coded_sp_converted)
@@ -70,6 +73,8 @@ for file in glob.glob(eval_B_dir + '/*.wav'):
     coded_sp_transposed = coded_sp.T
     coded_sp_norm = (coded_sp_transposed - coded_sps_B_mean) / coded_sps_B_std
     coded_sp_converted_norm = model.test(inputs=np.array([coded_sp_norm]), direction='B2A')[0]
+    if coded_sp_converted_norm.shape[1] > len(f0):
+        coded_sp_converted_norm = coded_sp_converted_norm[:, :-1]
     coded_sp_converted = coded_sp_converted_norm * coded_sps_A_std + coded_sps_A_mean
     coded_sp_converted = coded_sp_converted.T
     coded_sp_converted = np.ascontiguousarray(coded_sp_converted)

@@ -20,7 +20,7 @@ class CycleGAN(object):
         self.build_model()
         self.optimizer_initializer()
 
-        self.saver = tf.train.Saver()
+        self.saver = tf.train.Saver(max_to_keep=100)
         self.sess = tf.Session()
         self.sess.run(tf.global_variables_initializer())
 
