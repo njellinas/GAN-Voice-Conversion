@@ -7,7 +7,7 @@ from speech_tools import *
 dataset = 'vcc2018'
 src_speaker = 'VCC2SF3'
 trg_speaker = 'VCC2TM1'
-model_name = 'cyclegan_vc'
+model_name = 'cyclegan_vc2'
 
 data_dir = os.path.join('datasets', dataset)
 exp_dir = os.path.join('experiments', dataset)
