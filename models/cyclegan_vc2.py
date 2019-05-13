@@ -40,6 +40,9 @@ class CycleGAN2(object):
         # Placeholders for fake generated samples
         self.input_A_fake = tf.placeholder(tf.float32, shape=self.input_shape, name='input_A_fake')
         self.input_B_fake = tf.placeholder(tf.float32, shape=self.input_shape, name='input_B_fake')
+        # Placeholders for cycle generated samples
+        self.input_A_cycle = tf.placeholder(tf.float32, shape=self.input_shape, name='input_A_cycle')
+        self.input_B_cycle = tf.placeholder(tf.float32, shape=self.input_shape, name='input_B_cycle')
         # Placeholder for test samples
         self.input_A_test = tf.placeholder(tf.float32, shape=self.input_shape, name='input_A_test')
         self.input_B_test = tf.placeholder(tf.float32, shape=self.input_shape, name='input_B_test')
@@ -62,10 +65,17 @@ class CycleGAN2(object):
                                                     batch_size=self.batch_size, reuse=True,
                                                     scope_name='generator_A2B')
 
+        # One-step discriminator
         self.discrimination_A_fake = self.discriminator(inputs=self.generation_A, reuse=False,
                                                         scope_name='discriminator_A')
         self.discrimination_B_fake = self.discriminator(inputs=self.generation_B, reuse=False,
                                                         scope_name='discriminator_B')
+
+        # Two-step discriminator
+        self.discrimination_A_dot_fake = self.discriminator(inputs=self.cycle_A, reuse=False,
+                                                            scope_name='discriminator_A_dot')
+        self.discrimination_B_dot_fake = self.discriminator(inputs=self.cycle_B, reuse=False,
+                                                            scope_name='discriminator_B_dot')
 
         # Cycle loss
         self.cycle_loss = l1_loss(y=self.input_A_real, y_hat=self.cycle_A) + l1_loss(y=self.input_B_real,
@@ -79,15 +89,24 @@ class CycleGAN2(object):
         self.lambda_cycle = tf.placeholder(tf.float32, None, name='lambda_cycle')
         self.lambda_identity = tf.placeholder(tf.float32, None, name='lambda_identity')
 
-        # Generator loss
+        # ------------------------------- Generator loss
         # Generator wants to fool discriminator
         self.generator_loss_A2B = l2_loss(y=tf.ones_like(self.discrimination_B_fake), y_hat=self.discrimination_B_fake)
         self.generator_loss_B2A = l2_loss(y=tf.ones_like(self.discrimination_A_fake), y_hat=self.discrimination_A_fake)
 
-        # Merge the two generators and the cycle loss
-        self.generator_loss = self.generator_loss_A2B + self.generator_loss_B2A + self.lambda_cycle * self.cycle_loss + self.lambda_identity * self.identity_loss
+        # Two-step generator loss
+        self.two_step_generator_loss_A = l2_loss(y=tf.ones_like(self.discrimination_A_dot_fake),
+                                                 y_hat=self.discrimination_A_dot_fake)
+        self.two_step_generator_loss_B = l2_loss(y=tf.ones_like(self.discrimination_B_dot_fake),
+                                                 y_hat=self.discrimination_B_dot_fake)
 
-        # Discriminator loss
+        # Merge the two generators and the cycle loss
+        self.generator_loss = self.generator_loss_A2B + self.generator_loss_B2A + \
+                              self.two_step_generator_loss_A + self.two_step_generator_loss_B + \
+                              self.lambda_cycle * self.cycle_loss + self.lambda_identity * self.identity_loss
+
+        # ------------------------------- Discriminator loss
+        # One-step
         self.discrimination_input_A_real = self.discriminator(inputs=self.input_A_real, reuse=True,
                                                               scope_name='discriminator_A')
         self.discrimination_input_B_real = self.discriminator(inputs=self.input_B_real, reuse=True,
@@ -96,6 +115,16 @@ class CycleGAN2(object):
                                                               scope_name='discriminator_A')
         self.discrimination_input_B_fake = self.discriminator(inputs=self.input_B_fake, reuse=True,
                                                               scope_name='discriminator_B')
+
+        # Two-step
+        self.discrimination_input_A_dot_real = self.discriminator(inputs=self.input_A_real, reuse=True,
+                                                                  scope_name='discriminator_A_dot')
+        self.discrimination_input_B_dot_real = self.discriminator(inputs=self.input_B_real, reuse=True,
+                                                                  scope_name='discriminator_B_dot')
+        self.discrimination_input_A_dot_fake = self.discriminator(inputs=self.input_A_cycle, reuse=True,
+                                                                  scope_name='discriminator_A_dot')
+        self.discrimination_input_B_dot_fake = self.discriminator(inputs=self.input_B_cycle, reuse=True,
+                                                                  scope_name='discriminator_B_dot')
 
         # Discriminator wants to classify real and fake correctly
         self.discriminator_loss_input_A_real = l2_loss(y=tf.ones_like(self.discrimination_input_A_real),
@@ -110,8 +139,23 @@ class CycleGAN2(object):
                                                        y_hat=self.discrimination_input_B_fake)
         self.discriminator_loss_B = (self.discriminator_loss_input_B_real + self.discriminator_loss_input_B_fake) / 2
 
+        # Two-step discriminator loss
+        self.two_step_discriminator_loss_input_A_real = l2_loss(y=tf.ones_like(self.discrimination_input_A_dot_real),
+                                                                y_hat=self.discrimination_input_A_dot_real)
+        self.two_step_discriminator_loss_input_A_fake = l2_loss(y=tf.zeros_like(self.discrimination_input_A_dot_fake),
+                                                                y_hat=self.discrimination_input_A_dot_fake)
+        self.two_step_discriminator_loss_A = (self.two_step_discriminator_loss_input_A_real +
+                                              self.two_step_discriminator_loss_input_A_fake) / 2
+        self.two_step_discriminator_loss_input_B_real = l2_loss(y=tf.ones_like(self.discrimination_input_B_dot_real),
+                                                                y_hat=self.discrimination_input_B_dot_real)
+        self.two_step_discriminator_loss_input_B_fake = l2_loss(y=tf.zeros_like(self.discrimination_input_B_dot_fake),
+                                                                y_hat=self.discrimination_input_B_dot_fake)
+        self.two_step_discriminator_loss_B = (self.two_step_discriminator_loss_input_B_real +
+                                              self.two_step_discriminator_loss_input_B_fake) / 2
+
         # Merge the two discriminators into one
-        self.discriminator_loss = self.discriminator_loss_A + self.discriminator_loss_B
+        self.discriminator_loss = self.discriminator_loss_A + self.discriminator_loss_B + \
+                                  self.two_step_discriminator_loss_A + self.two_step_discriminator_loss_B
 
         # Categorize variables because we have to optimize the two sets of the variables separately
         trainable_variables = tf.trainable_variables()
@@ -139,9 +183,9 @@ class CycleGAN2(object):
     def train(self, input_A, input_B, lambda_cycle, lambda_identity, generator_learning_rate,
               discriminator_learning_rate):
 
-        generation_A, generation_B, generator_loss, _, generator_summaries = self.sess.run(
-            [self.generation_A, self.generation_B, self.generator_loss, self.generator_optimizer,
-             self.generator_summaries], \
+        generation_A, generation_B, cycle_A, cycle_B, generator_loss, _, generator_summaries = self.sess.run(
+            [self.generation_A, self.generation_B, self.cycle_A, self.cycle_B, self.generator_loss,
+             self.generator_optimizer, self.generator_summaries],
             feed_dict={self.lambda_cycle: lambda_cycle, self.lambda_identity: lambda_identity,
                        self.input_A_real: input_A, self.input_B_real: input_B,
                        self.generator_learning_rate: generator_learning_rate})
@@ -149,10 +193,11 @@ class CycleGAN2(object):
         self.writer.add_summary(generator_summaries, self.train_step)
 
         discriminator_loss, _, discriminator_summaries = self.sess.run(
-            [self.discriminator_loss, self.discriminator_optimizer, self.discriminator_summaries], \
+            [self.discriminator_loss, self.discriminator_optimizer, self.discriminator_summaries],
             feed_dict={self.input_A_real: input_A, self.input_B_real: input_B,
-                       self.discriminator_learning_rate: discriminator_learning_rate, self.input_A_fake: generation_A,
-                       self.input_B_fake: generation_B})
+                       self.discriminator_learning_rate: discriminator_learning_rate,
+                       self.input_A_fake: generation_A, self.input_B_fake: generation_B,
+                       self.input_A_cycle: cycle_A, self.input_B_cycle: cycle_B})
 
         self.writer.add_summary(discriminator_summaries, self.train_step)
 

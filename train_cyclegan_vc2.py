@@ -9,7 +9,7 @@ np.random.seed(300)
 dataset = 'vcc2018'
 src_speaker = 'VCC2SF3'
 trg_speaker = 'VCC2TM1'
-model_name = 'cyclegan_vc2'
+model_name = 'cyclegan_vc2_two_step'
 os.makedirs(os.path.join('experiments', dataset, model_name, 'checkpoints'), exist_ok=True)
 log_dir = os.path.join('logs', '{}_{}'.format(dataset, model_name))
 os.makedirs(log_dir, exist_ok=True)
